@@ -1,0 +1,70 @@
+function:
+  name: ReanudarRutaFn
+  runtime: python3.12
+  handler: handler.lambda_handler
+  description: |
+    Reanuda al conductor Gammavet tras una pausa y reclama la parada actual/
+    siguiente indicada. Usar cuando el conductor dice que vuelve a operar. La
+    accion esta implicita por este nodo; no pedir ni enviar parametro accion.
+  timeout: 300
+  memory_size: 256
+
+  layers:
+    - foundationMinimal
+    - foundationApi
+
+  parameters:
+    required: []
+    optional:
+      - name: route_stop_id
+        type: string
+        description: ID UUID de la parada intencionada luego de reanudar. Si falta, la lambda intenta recuperarlo del contexto de sesion.
+      - name: pickup_order_id
+        type: string
+        description: ID UUID del retiro asociado, usado como verificacion cruzada cuando este disponible.
+      - name: driver_id
+        type: string
+        description: ID UUID del conductor, si esta disponible.
+      - name: driver_phone
+        type: string
+        description: Telefono WhatsApp del conductor, si esta disponible.
+      - name: ticket_id
+        type: string
+        description: ID UUID opcional del ticket o sesion.
+      - name: nota
+        type: string
+        description: Texto opcional usado solo como fuente secundaria para recuperar route_stop_id o pickup_order_id.
+
+  widget:
+    enabled: false
+    type: dynamic_widget
+    params: []
+
+  testing:
+    handles_files: false
+    produces_files: false
+
+  data:
+    reads:
+      - table: gammavet_test.drivers
+        columns: [id, phone, paused, active, availability]
+      - table: gammavet_test.route_stops
+        columns: [id, route_id, pickup_order_id, stop_number, queue_position, clinic_id, clinic_name_snapshot, address_snapshot, comuna_snapshot, zone_snapshot, maps_url_snapshot, status, ticket_id]
+      - table: gammavet_test.dispatch_events
+        columns: [id, event_type, actor_lambda, orchestration_event_uuid, metadata]
+    writes:
+      - table: gammavet_test.drivers
+        mode: update
+        columns: [paused, updated_at]
+      - table: gammavet_test.route_stops
+        mode: update
+        columns: [status, started_at, ticket_id, updated_at]
+      - table: gammavet_test.pickup_orders
+        mode: update
+        columns: [status, pickup_started_at, updated_at]
+      - table: gammavet_test.dispatch_events
+        mode: insert
+        columns: [event_type, actor_lambda, driver_id, pickup_order_id, route_id, route_stop_id, orchestration_event_uuid, metadata]
+    rpc:
+      - POST /api/gammavet/drivers/resume
+      - POST /api/gammavet/route-stops/start-next

@@ -1,0 +1,15 @@
+{
+  "function_name": "ReanudarRutaFn",
+  "args": {
+    "action": "<action_value>"
+  },
+  "widget_params": {},
+  "prompt": "",
+  "event_type": "function_call",
+  "extra_params": {},
+  "files": [],
+  "metadata": {
+    "description": "Basic test for ReanudarRutaFn",
+    "expected_status": "success"
+  }
+}
