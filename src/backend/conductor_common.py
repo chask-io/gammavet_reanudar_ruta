@@ -126,13 +126,22 @@ class ConductorContext:
     # ------------------------------------------------------------------
 
     def tenant_client(self) -> TenantDataClient:
-        branch = (
-            os.environ.get("TENANT_BRANCH")
-            or os.environ.get("CHASK_TENANT_BRANCH")
-            or getattr(self.evento_orquestacion, "branch", None)
-            or self.runtime.tenant_branch_default
-        )
+        explicit_branch = os.environ.get("TENANT_BRANCH") or os.environ.get("CHASK_TENANT_BRANCH")
+        base_url_hint = os.environ.get("CHASK_API_BASE_URL") or os.environ.get("BASE_DOMAIN", "")
+        if explicit_branch:
+            branch = explicit_branch
+        elif "app.chask.it" in base_url_hint:
+            branch = self.runtime.tenant_branch_default
+        else:
+            branch = getattr(self.evento_orquestacion, "branch", None) or self.runtime.tenant_branch_default
         slug = os.environ.get("TENANT_SLUG") or self.runtime.tenant_slug_default
+        logger.info(
+            "TenantDataClient config branch=%s slug=%s lambda_uuid=%s access_token_present=%s",
+            branch,
+            slug,
+            self.function_uuid(),
+            bool(getattr(self.evento_orquestacion, "access_token", None)),
+        )
         client = TenantDataClient(
             org_uuid=self.evento_orquestacion.organization.organization_id,
             branch=branch,
