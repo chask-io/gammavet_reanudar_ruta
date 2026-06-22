@@ -3,14 +3,14 @@
   "test_type": "operator_params",
   "args": {},
   "widget_params": {},
-  "prompt": "El conductor dice que vuelve a operar despues de una pausa. Usa ReanudarRutaFn sin parametro accion. Incluye route_stop_id aaaaaaaa-1111-4111-8111-111111111111, pickup_order_id bbbbbbbb-2222-4222-8222-222222222222, driver_phone +56911112222 y ticket_id 22222222-3333-4444-8555-666666666666.",
+  "prompt": "El conductor dice que vuelve a operar despues de una pausa, pero el contexto no trae driver_phone ni route_stop_id. Usa ReanudarRutaFn sin parametro accion y sin inventar IDs.",
   "event_type": "function_call",
   "extra_params": {
     "is_operator_params_test": true
   },
   "files": [],
   "metadata": {
-    "description": "Test operator generating narrow ReanudarRutaFn params without accion",
-    "expected_status": "success"
+    "description": "Test operator keeps ReanudarRutaFn narrow without accion or invented IDs",
+    "expected_status": "failure"
   }
 }
