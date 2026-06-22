@@ -52,6 +52,8 @@ function:
         columns: [id, driver_id, route_date, route_code, driver_name_snapshot]
       - table: gammavet_test.route_stops
         columns: [id, route_id, pickup_order_id, stop_number, queue_position, clinic_id, clinic_name_snapshot, address_snapshot, comuna_snapshot, zone_snapshot, maps_url_snapshot, observations, estimated_arrival_at, started_at, actual_arrival_at, status, ticket_id, source_spreadsheet_id, source_sheet_name, source_sheet_row, created_at, updated_at]
+      - table: gammavet_test.pickup_orders
+        columns: [id]
       - table: gammavet_test.dispatch_events
         columns: [id, event_type, actor_lambda, orchestration_event_uuid, metadata]
     writes:
