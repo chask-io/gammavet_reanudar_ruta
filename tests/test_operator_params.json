@@ -11,6 +11,6 @@
   "files": [],
   "metadata": {
     "description": "Test operator keeps ReanudarRutaFn narrow without accion or invented IDs",
-    "expected_status": "failure"
+    "expected_status": "success"
   }
 }

@@ -8,7 +8,7 @@
   "extra_params": {},
   "files": [],
   "metadata": {
-    "description": "Test ReanudarRutaFn rejects missing driver/route context without accion parameter",
-    "expected_status": "failure"
+    "description": "Test ReanudarRutaFn fail-closed path with no accion parameter",
+    "expected_status": "success"
   }
 }

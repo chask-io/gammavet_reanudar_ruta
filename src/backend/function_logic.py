@@ -21,7 +21,7 @@ logger.setLevel(logging.INFO)
 
 ACTION_NAME = "reanudar"
 ACTOR_LAMBDA = "gammavet_reanudar_ruta"
-DEFAULT_FUNCTION_UUID = "00000000-0000-4000-8000-000000000003"
+DEFAULT_FUNCTION_UUID = "694a8071-152f-4771-9484-15e90a46946c"
 
 
 class FunctionBackend:
@@ -42,6 +42,9 @@ class FunctionBackend:
         )
 
     def process_request(self) -> str:
+        decision = self.context.require_route_stop_or_terminal(action_name=ACTION_NAME)
+        if decision.should_stop:
+            return decision.result_message or "Accion de ruta detenida por guardia terminal."
         _resume_driver(self.context)
         return _start_requested_stop(
             self.context,

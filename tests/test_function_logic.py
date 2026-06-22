@@ -131,10 +131,8 @@ def test_reanudar_ruta_clears_pause_then_claims_explicit_route_stop(monkeypatch)
     assert whatsapp_call["prompt"].startswith("Ruta reanudada. Siguiente parada")
 
 
-def test_reanudar_ruta_missing_route_stop_still_uses_helper_guard_after_resume(monkeypatch):
-    tenant_client = FakeTenantClient(
-        [{"driver": {"id": "dddddddd-4444-4444-8444-444444444444", "paused": False}}]
-    )
+def test_reanudar_ruta_missing_route_stop_uses_helper_guard_before_resume(monkeypatch):
+    tenant_client = FakeTenantClient([])
     fake_orchestrator = FakeOrchestrator()
     monkeypatch.setattr(
         "backend.conductor_common.ConductorContext.tenant_client",
@@ -144,7 +142,7 @@ def test_reanudar_ruta_missing_route_stop_still_uses_helper_guard_after_resume(m
 
     result = FunctionBackend(_event({})).process_request()
 
-    assert [call["path"] for call in tenant_client.calls] == [TENANT_RESUME_DRIVER_PATH]
+    assert tenant_client.calls == []
     assert "route_stop_id" in result
     dispatch_call = next(c for c in fake_orchestrator.calls if c.get("event_type") == "dispatch_event")
     assert dispatch_call["extra_params"]["event_type"] == "conductor_route_stop_id_missing_terminal"
