@@ -1,0 +1,20 @@
+{
+  "function_name": "ReanudarRutaFn",
+  "test_type": "provided_params",
+  "args": {
+    "route_stop_id": "aaaaaaaa-1111-4111-8111-111111111111",
+    "pickup_order_id": "bbbbbbbb-2222-4222-8222-222222222222",
+    "driver_phone": "+56911112222",
+    "ticket_id": "22222222-3333-4444-8555-666666666666",
+    "nota": "Vuelvo a operar route_stop_id: aaaaaaaa-1111-4111-8111-111111111111"
+  },
+  "widget_params": {},
+  "prompt": "",
+  "event_type": "function_call",
+  "extra_params": {},
+  "files": [],
+  "metadata": {
+    "description": "Test ReanudarRutaFn with explicit route_stop_id and no accion parameter",
+    "expected_status": "success"
+  }
+}
