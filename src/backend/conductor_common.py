@@ -770,14 +770,6 @@ class ConductorContext:
 
 @contextmanager
 def tenant_data_public_test_mode() -> Iterator[None]:
-    """Compatibility shim for the currently published foundation helper."""
+    """Compatibility shim retained for callers; tenant routing is resolved normally."""
 
-    previous_mode = os.environ.get("MODE")
-    os.environ["MODE"] = "PRODUCTION"
-    try:
-        yield
-    finally:
-        if previous_mode is None:
-            os.environ.pop("MODE", None)
-        else:
-            os.environ["MODE"] = previous_mode
+    yield
