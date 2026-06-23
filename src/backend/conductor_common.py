@@ -43,8 +43,9 @@ except ModuleNotFoundError:  # pragma: no cover - depends on lambda layer layout
 logger = logging.getLogger(__name__)
 
 BOT_PHONE_ID = "1051240901403291"
-DEFAULT_TENANT_SLUG = "chask"
 DEFAULT_TENANT_BRANCH = "test"
+DEV_TENANT_SLUG = "chask"
+PROD_TENANT_SLUG = "gammavet"
 
 TENANT_START_NEXT_PATH = "gammavet/route-stops/start-next"
 TENANT_COMPLETE_CURRENT_PATH = "gammavet/route-stops/complete-current"
@@ -76,7 +77,7 @@ class ConductorRuntime:
 
     actor_lambda: str
     function_uuid_default: str
-    tenant_slug_default: str = DEFAULT_TENANT_SLUG
+    tenant_slug_default: str | None = None
     tenant_branch_default: str = DEFAULT_TENANT_BRANCH
     bot_phone_id: str = BOT_PHONE_ID
 
@@ -134,7 +135,7 @@ class ConductorContext:
             branch = self.runtime.tenant_branch_default
         else:
             branch = getattr(self.evento_orquestacion, "branch", None) or self.runtime.tenant_branch_default
-        slug = os.environ.get("TENANT_SLUG") or self.runtime.tenant_slug_default
+        slug = self.resolve_tenant_slug(branch=branch, base_url_hint=base_url_hint)
         logger.info(
             "TenantDataClient config branch=%s slug=%s lambda_uuid=%s access_token_present=%s",
             branch,
@@ -150,6 +151,16 @@ class ConductorContext:
         )
         client._slug = slug
         return client
+
+    def resolve_tenant_slug(self, *, branch: str, base_url_hint: str = "") -> str:
+        explicit_slug = os.environ.get("TENANT_SLUG") or os.environ.get("CHASK_TENANT_SLUG")
+        if explicit_slug:
+            return explicit_slug
+        if "app.chask.it" in base_url_hint:
+            return DEV_TENANT_SLUG
+        if str(branch).lower() == "prod":
+            return PROD_TENANT_SLUG
+        return self.runtime.tenant_slug_default or DEV_TENANT_SLUG
 
     def function_uuid(self) -> str:
         return (
@@ -539,6 +550,25 @@ class ConductorContext:
             "Handoff terminal enviado al conductor."
         )
 
+    def completion_missing_route_stop_terminal(self, *, action_name: str, outcome: str) -> str:
+        self.emit_dispatch_event(
+            event_type="conductor_complete_route_stop_id_missing_terminal",
+            metadata={
+                "reason": "missing_requested_route_stop_id",
+                "driver_phone": self.driver_phone(),
+                "session_uuid": str(self.evento_orquestacion.orchestration_session_uuid),
+                "event_id": str(self.evento_orquestacion.event_id),
+                "terminal": True,
+                "action": action_name,
+                "outcome": outcome,
+            },
+        )
+        self.enviar_mensaje_texto(COMPLETE_CURRENT_HANDOFF)
+        return (
+            "No se encontro route_stop_id para completar o fallar la parada. "
+            "Handoff terminal enviado al conductor."
+        )
+
     @staticmethod
     def is_no_active_stop_http_404(exc: requests.HTTPError) -> bool:
         response = getattr(exc, "response", None)
@@ -625,6 +655,41 @@ class ConductorContext:
             )
         except Exception as exc:  # pragma: no cover - external failure path
             logger.error("Error emitiendo dispatch_event %s: %s", event_type, exc)
+
+    def pause_session_until_next_driver_message(self, *, reason: str) -> None:
+        """Stop the operator turn after one action; WhatsApp inbound resumes paused sessions."""
+        extra_params = self.evento_orquestacion.extra_params or {}
+        if extra_params.get("is_test") or extra_params.get("is_node_test"):
+            return
+        session_uuid = self.evento_orquestacion.orchestration_session_uuid
+        if not session_uuid:
+            logger.warning("No se puede pausar sesion: orchestration_session_uuid ausente")
+            return
+        try:
+            response = orchestrator_api_manager.call(
+                "change_orchestration_session_status",
+                orchestration_session_uuid=str(session_uuid),
+                status="paused",
+                access_token=self.evento_orquestacion.access_token,
+                organization_id=self.evento_orquestacion.organization.organization_id,
+            )
+            logger.info(
+                "Sesion %s pausada hasta proximo mensaje del conductor: %s response=%s",
+                session_uuid,
+                reason,
+                response,
+            )
+            self.emit_dispatch_event(
+                event_type="conductor_session_paused_until_next_driver_message",
+                metadata={
+                    "reason": reason,
+                    "session_uuid": str(session_uuid),
+                    "event_id": str(self.evento_orquestacion.event_id),
+                    "actor_lambda": self.runtime.actor_lambda,
+                },
+            )
+        except Exception as exc:  # pragma: no cover - external failure path
+            logger.error("Error pausando sesion hasta proximo mensaje: %s", exc)
 
     # ------------------------------------------------------------------
     # Event parsing helpers
