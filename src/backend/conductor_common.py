@@ -127,6 +127,18 @@ class ConductorContext:
     # ------------------------------------------------------------------
 
     def tenant_client(self) -> TenantDataClient:
+        branch, slug = self.tenant_routing_config()
+        self.log_tenant_data_config(branch=branch, slug=slug)
+        client = TenantDataClient(
+            org_uuid=self.evento_orquestacion.organization.organization_id,
+            branch=branch,
+            lambda_uuid=self.function_uuid(),
+            access_token=getattr(self.evento_orquestacion, "access_token", None),
+        )
+        client._slug = slug
+        return client
+
+    def tenant_routing_config(self) -> tuple[str, str]:
         explicit_branch = os.environ.get("TENANT_BRANCH") or os.environ.get("CHASK_TENANT_BRANCH")
         base_url_hint = os.environ.get("CHASK_API_BASE_URL") or os.environ.get("BASE_DOMAIN", "")
         if explicit_branch:
@@ -136,6 +148,11 @@ class ConductorContext:
         else:
             branch = getattr(self.evento_orquestacion, "branch", None) or self.runtime.tenant_branch_default
         slug = self.resolve_tenant_slug(branch=branch, base_url_hint=base_url_hint)
+        return branch, slug
+
+    def log_tenant_data_config(self, *, branch: str | None = None, slug: str | None = None) -> None:
+        if branch is None or slug is None:
+            branch, slug = self.tenant_routing_config()
         logger.info(
             "TenantDataClient config branch=%s slug=%s lambda_uuid=%s access_token_present=%s",
             branch,
@@ -143,14 +160,6 @@ class ConductorContext:
             self.function_uuid(),
             bool(getattr(self.evento_orquestacion, "access_token", None)),
         )
-        client = TenantDataClient(
-            org_uuid=self.evento_orquestacion.organization.organization_id,
-            branch=branch,
-            lambda_uuid=self.function_uuid(),
-            access_token=getattr(self.evento_orquestacion, "access_token", None),
-        )
-        client._slug = slug
-        return client
 
     def resolve_tenant_slug(self, *, branch: str, base_url_hint: str = "") -> str:
         explicit_slug = os.environ.get("TENANT_SLUG") or os.environ.get("CHASK_TENANT_SLUG")
@@ -246,6 +255,7 @@ class ConductorContext:
         result_message and must not call tenant APIs.
         """
 
+        self.log_tenant_data_config()
         resolved = self.resolve_route_stop_ids()
         if resolved.route_stop_id:
             return MissingRouteStopDecision(should_stop=False)
@@ -551,6 +561,7 @@ class ConductorContext:
         )
 
     def completion_missing_route_stop_terminal(self, *, action_name: str, outcome: str) -> str:
+        self.log_tenant_data_config()
         self.emit_dispatch_event(
             event_type="conductor_complete_route_stop_id_missing_terminal",
             metadata={
