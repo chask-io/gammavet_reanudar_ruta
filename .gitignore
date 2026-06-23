@@ -30,6 +30,9 @@ Thumbs.db
 .aws-sam/
 samconfig.toml
 
+# Chask local publish state
+.chask/function.gammavet-builder.json
+
 # Build artifacts
 *.zip
 build/
